@@ -1,0 +1,53 @@
+name: Me No Whitespace
+description: Validate that files do not contain trialing whitespace
+
+inputs:
+  BASE_REF:
+    required: true
+    description: The base ref of the Pull Request
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Ruby 3.1
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.1'
+
+    - name: Validate no trailing whitespace
+      run: |
+        ruby -e '
+          BASE_REF = ENV["BASE_REF"]
+
+          FILE_TYPE = "file"
+          TRAILING_WHITESPACE_REGEX = /\s+$/
+
+          def modified_file_paths(base_ref)
+            `git diff origin/#{base_ref}..HEAD --name-only`
+              .split("\n")
+          end
+
+          def validate_files(file_paths)
+            result = true
+
+            file_paths.each do |file_path|
+              next unless File.ftype(file_path) == FILE_TYPE
+
+              result = false if File.readlines(file_path)
+                .map(&:chomp)
+                .select { |line| line.match? TRAILING_WHITESPACE_REGEX }
+                .any?
+
+              break unless result
+            end
+
+            result
+          end
+
+          file_paths = modified_file_paths(BASE_REF)
+
+          exit 1 unless validate_files(file_paths)
+        '
+      shell: bash
+      env:
+        BASE_REF: ${{ inputs.BASE_REF }}
