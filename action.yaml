@@ -31,8 +31,8 @@ runs:
             result = true
 
             file_paths.each do |file_path|
-              next unless File.ftype(file_path) == FILE_TYPE
               next unless File.exist? file_path
+              next unless File.ftype(file_path) == FILE_TYPE
 
               result = false if File.readlines(file_path)
                 .map(&:chomp)
